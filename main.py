@@ -29,10 +29,7 @@ class Game:
 
     def display_table(self, player, opp):
         print('----------------------------------------')
-        print(f'Opponents cards')
-        for i in range(len(opp.hand)):
-            print(f'{i + 1}.({opp.hand[i][0]} {suits_symbols[opp.hand[i][1]]})', end='   ')
-        print()
+        print(f'Opponent\'s card count: {len(opp.hand)}')
         print('Table:')
         print('[', end='')
         for i in range(len(self.current_cards)):
