@@ -61,9 +61,15 @@ class Game:
             else:
                 self.player_attack = False
 
+            print('Choose bot difficulty(1.Easy, 2.Hard):')
+            difficulty = input()
+
+            while difficulty != '1' and difficulty != '2':
+                print('Invalid choice')
+                difficulty = input()
+
 
             print('Starting the game...')
-            time.sleep(2)
             print('--------------------------')
             print(f'{self.trump}({suits_symbols[self.trump]}) is the trump card')
             print('--------------------------')
@@ -73,7 +79,7 @@ class Game:
             else:
                 print('Opponent goes first')
 
-            time.sleep(1.5)
+            time.sleep(1)
 
             while (len(self.deck) > 0) or (len(player.hand) > 0 and len(bot.hand) > 0):  # main game loop
                 self.current_cards.clear()
@@ -92,14 +98,14 @@ class Game:
                             self.player_attack = not self.player_attack
                             break
                         elif player.play_card(int(card_choice), True):
-                            if not bot.bot_play(player, False):
+                            if not bot.bot_play(player, False, difficulty):
                                 for card in self.current_cards:
                                     bot.hand.append(card)
                                 self.current_cards.clear()
                                 break
                 else:
                     while True:
-                        if bot.bot_play(player, True):
+                        if bot.bot_play(player, True, difficulty):
                             self.display_table(player, bot)
 
                             print(f'Choose your move(play card 1-{len(player.hand)}, or {len(player.hand) + 1}: take cards):')
@@ -162,8 +168,7 @@ class Player:
             print(f'{self.name} drew {6 - len(self.hand)} cards')
 
             for i in range(6 - len(self.hand)):
-                self.hand.append(self.game.deck[i])
-                del self.game.deck[i]
+                self.hand.append(self.game.deck.pop())
         else:
             print(f'{self.name} has enough cards')
 
@@ -213,12 +218,12 @@ class Player:
                 else:
                     return False
 
-    def bot_play(self, p, attack):
+    def bot_play(self, p, attack, difficulty):
         bot_view = self.game.deck + p.hand  # all the possible cards that could potentially be in players hands
         trump = self.game.trump
         if attack:  # when attacking we want to find a list of all the cards that we can place.
             # Then we should find the chances of each card being successfully defended by the player.
-            def valid_defense_cards(attack_card):
+            def valid_defense_cards(attack_card): # returns list of all cards that can defend the attack_card
                 trump = self.game.trump
                 valid = []
 
@@ -235,25 +240,41 @@ class Player:
 
                 return valid
 
-            chosen = None
-            least_defences = 20
+            if difficulty == '2':
+                chosen = None
+                least_defences = 20
 
-            for card in self.hand:
-                if any(card[0] == c[0] for c in self.game.current_cards) or len(self.game.current_cards) == 0:  # check if there is a same suit or number
-                    possible_defences = len(valid_defense_cards(card))
+                for card in self.hand:
+                    if any(card[0] == c[0] for c in self.game.current_cards) or len(self.game.current_cards) == 0:  # check if there is a same suit or number
+                        possible_defences = len(valid_defense_cards(card))
 
-                    if possible_defences < least_defences:
-                        least_defences = possible_defences
-                        chosen = card
-                    elif possible_defences == least_defences:  # if it's the same we choose less valuable card
-                        if card_numbers.index(card[0]) < card_numbers.index(chosen[0]):
+                        if possible_defences < least_defences:
+                            least_defences = possible_defences
                             chosen = card
+                        elif possible_defences == least_defences:  # if it's the same we choose less valuable card
+                            if card_numbers.index(card[0]) < card_numbers.index(chosen[0]):
+                                chosen = card
 
-            if chosen:
-                self.place_card(chosen)
+                if chosen:
+                    self.place_card(chosen)
+                    return True
+
+                return False
+
+            else:  # difficulty == '1'
+                valid_cards = [] # all  the cards bot can play
+
+                for card in self.hand:
+                    if any(card[0] == c[0] for c in self.game.current_cards) or len(self.game.current_cards) == 0:
+                        valid_cards.append(card)
+
+                if not valid_cards:
+                    return False
+
+                self.place_card(random.choice(valid_cards))
+
                 return True
 
-            return False
 
         else:  # when defending bot will choose the least valuable card. If there is any card available
             # to play other than the trump card, the bot will play that card
@@ -281,14 +302,18 @@ class Player:
 
                 return least
 
-            non_trump = [x for x in valid_defences if x[1] != trump]
+            if difficulty == '2':
+                non_trump = [x for x in valid_defences if x[1] != trump]
 
-            if non_trump:
-                chosen_card = least_card(non_trump)
-            else:
-                chosen_card = least_card(valid_defences)
+                if non_trump:
+                    chosen_card = least_card(non_trump)
+                else:
+                    chosen_card = least_card(valid_defences)
 
-            self.place_card(chosen_card)
+                self.place_card(chosen_card)
+
+            else:  # difficulty == '1'
+                self.place_card(random.choice(valid_defences))
 
             return True
 
