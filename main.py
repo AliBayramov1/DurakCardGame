@@ -9,7 +9,15 @@ card_numbers = ['6', '7', '8', '9', '10', 'Jack', 'Queen', 'King', 'Ace']
 # playing the least valuable cards first
 
 class Game:
+    """
+    Main logic  of the game
+
+    Contains methods for choosing the first player, displaying the table and starting the game.
+    """
     def __init__(self):
+        """
+        Creates and shuffles the deck, initializes the table, sets the trump card and sets the starting attacker.
+        """
         self.deck = [(number, suit) for number in card_numbers for suit in card_suits]  # the initial deck of cards
         random.shuffle(self.deck)  # shuffle the list of cards
         self.current_cards = []  # cards that are currently placed at the table
@@ -17,6 +25,17 @@ class Game:
         self.player_attack = True
 
     def who_first(self, *args):  # find which player goes first. Args is a list of Player() objects
+        """
+        Determines which player goes first
+
+        The person with the lowest trump card starts first
+
+        Parameters:
+            *args (Player): Player objects participating in the game
+
+        Returns:
+            Player: The Player who goes first
+        """
         least = 'Ace'
         least_player = args[0]
         for player in args:
@@ -28,6 +47,13 @@ class Game:
         return least_player
 
     def display_table(self, player, opp):
+        """
+        Displays the current table.
+
+        Parameters:
+            player (Player): Player participating in the game
+            opp (Player): Bot participating in the game
+        """
         print('----------------------------------------')
         print(f'Opponent\'s card count: {len(opp.hand)}')
         print('Table:')
@@ -45,6 +71,11 @@ class Game:
         print('----------------------------------------')
 
     def start(self):
+        """
+        Starts the main game loop.
+
+        Handles role switching, card drawing, win/lose and replay logic.
+        """
         # game should go while both players have at least one card in hand and deck is not
         # empty
         input('Press enter to start')
@@ -56,6 +87,8 @@ class Game:
             bot = Player(self, 'Bot')
 
             self.trump = self.deck[-1][1]
+            self.deck[-1], self.deck[0] = self.deck[0], self.deck[-1]  # move the trump card to the bottom of the deck
+
             if self.who_first(player, bot) == player:
                 self.player_attack = True
             else:
@@ -152,7 +185,21 @@ class Game:
 
 
 class Player:
+    """
+    Represents a player in the game
+
+    Player can be a user or a bot and has a hand of cards.
+
+    Contains methods for drawing cards, placing cards and playing cards
+    """
     def __init__(self, game, name):
+        """
+        Defines the game of Player, sets the name of Player, initializers the hand and appends 6 cards to it.
+
+        Parameters:
+            game (Game): the game being played
+            name (str): the name of Player
+        """
         self.game = game
         self.name = name
         self.hand = []
@@ -164,21 +211,46 @@ class Player:
 
     def draw_cards(self):  # add cards from the deck to the list of player's cards if the player
         # has less than 6 cards and if the deck is not empty
-        if len(self.hand) < 6 and len(self.game.deck) > 0:
-            print(f'{self.name} drew {6 - len(self.hand)} cards')
+        """
+        Draws the cards from the deck into the hand until the player has 6 cards or the deck is empty.
+        """
+        if len(self.hand) < 6:
+            if len(self.game.deck) > 0:
+                count = 0
 
-            for i in range(6 - len(self.hand)):
-                self.hand.append(self.game.deck.pop())
+                while len(self.hand) < 6 and len(self.game.deck) > 0:
+                    self.hand.append(self.game.deck.pop())
+                    count += 1
+
+                print(f'{self.name} drew {count} cards')
+            else:
+                print('The deck is empty')
         else:
             print(f'{self.name} has enough cards')
 
 
     def place_card(self, card):
+        """
+        Place the chosen card to the current table.
+
+        Parameters:
+            card (tuple): the card to be placed, (number, suit)
+        """
         self.game.current_cards.append(card)
         self.hand.remove(card)
 
     def play_card(self, num, attack):  # check if Player can place a card. If yes, place the card.
         # num is the index of the card in the players hand(because player will be choosing the cards by their index)
+        """
+        Attempts to play a card from the player's hand.
+
+        Parameters:
+            num (int): Index of a chosen card
+            attack (bool): True if the player is attacking, False if defending
+
+        Returns:
+            bool: True if the card can be placed, False if not
+        """
         if num > len(self.hand):
             return False
 
@@ -219,6 +291,24 @@ class Player:
                     return False
 
     def bot_play(self, p, attack, difficulty):
+        """
+
+        Logic for bot's plays.
+        If difficulty is set to easy, bot chooses a random card from the set of all valid plays, bot when defending and attacking.
+
+        If difficulty is set to hard, when attacking, bot chooses a card from the list of valid plays that is the least likely
+        to be defended by player.
+        When defending, bot attempts to use the leat valuable card from the set of all valid plays.
+
+        Parameters:
+            p (Player): Player participating in the game
+            attack (bool): True if the bot is attacking, False if defending
+            difficulty (str): difficulty of hte game. '1' for easy, '2' for hard
+
+        Returns:
+            bool: True if the bot plays a card, False if not
+
+        """
         bot_view = self.game.deck + p.hand  # all the possible cards that could potentially be in players hands
         trump = self.game.trump
         if attack:  # when attacking we want to find a list of all the cards that we can place.
